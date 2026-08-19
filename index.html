@@ -88,6 +88,27 @@
   </div>
 </div>
 
+<div class="sheetBg" id="deleteGoalSheetBg">
+  <div class="sheet">
+    <h2>Delete "<span id="deleteGoalName"></span>"?</h2>
+    <p class="hint" style="margin-top:-4px;">This removes the goal and every step on its trail. This can't be undone.</p>
+    <div class="field">
+      <label for="deleteGoalReason">Reason</label>
+      <div class="reasonChips">
+        <button type="button" class="reasonChip" data-reason="Made in error">Made in error</button>
+        <button type="button" class="reasonChip" data-reason="No longer relevant">No longer relevant</button>
+        <button type="button" class="reasonChip" data-reason="Completed elsewhere">Completed elsewhere</button>
+      </div>
+      <input type="text" id="deleteGoalReason" placeholder="Why is this goal being removed?">
+      <div class="fieldError" id="deleteGoalError" style="display:none;">A reason is required.</div>
+    </div>
+    <div class="sheetActions">
+      <button class="btn ghost" id="cancelDeleteGoalBtn">Cancel</button>
+      <button class="btn danger" id="confirmDeleteGoalBtn">Delete goal</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/app.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
