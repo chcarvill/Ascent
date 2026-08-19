@@ -16,12 +16,20 @@
 <body>
 
 <header>
-  <div class="goalRow" id="goalRow"></div>
+  <div class="goalDropdownWrap">
+    <button class="goalDropdownBtn" id="goalDropdownBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+      <span id="goalDropdownLabel">Goal</span>
+      <svg class="chevron" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="goalDropdownMenu" id="goalDropdownMenu" role="listbox"></div>
+  </div>
   <div>
     <h1 id="goalTitle">Ascent</h1>
     <p class="sub" id="goalSub">A trail toward something worth reaching.</p>
   </div>
 </header>
+
+<div id="taskList" class="taskList"></div>
 
 <div id="trailWrap">
   <svg id="trailSvg" viewBox="0 0 400 800" xmlns="http://www.w3.org/2000/svg"></svg>
