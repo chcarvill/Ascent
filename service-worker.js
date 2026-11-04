@@ -1,10 +1,12 @@
-const CACHE_NAME = "ascent-cache-v1";
+const CACHE_NAME = "ascent-cache-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/app.js",
   "./js/palette.json",
+  "./images/hiker-girl.webp",
+  "./images/hiker-boy.webp",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
