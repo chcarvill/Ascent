@@ -284,16 +284,40 @@
     el('ellipse', { cx:12, cy:3, rx:8, ry:5, fill:'#A79C82' }, g);
   }
 
-  function hikerFigure(parent, x, y){
-    const g = el('g', { class:'hiker', transform:`translate(${x},${y})` }, parent);
-    el('circle', { cx:0, cy:-30, r:6, fill:'var(--ink)' }, g);
-    el('line', { x1:0, y1:-24, x2:0, y2:-8, stroke:'var(--clay)', 'stroke-width':5, 'stroke-linecap':'round' }, g);
-    el('line', { x1:0, y1:-8, x2:-6, y2:6, stroke:'var(--ink)', 'stroke-width':4, 'stroke-linecap':'round' }, g);
-    el('line', { x1:0, y1:-8, x2:7, y2:5, stroke:'var(--ink)', 'stroke-width':4, 'stroke-linecap':'round' }, g);
-    el('line', { x1:0, y1:-20, x2:-9, y2:-13, stroke:'var(--clay)', 'stroke-width':4, 'stroke-linecap':'round' }, g);
-    el('line', { x1:0, y1:-20, x2:8, y2:-12, stroke:'var(--clay)', 'stroke-width':4, 'stroke-linecap':'round' }, g);
-    el('line', { x1:9, y1:-30, x2:14, y2:2, stroke:'#8B6F47', 'stroke-width':2.5, 'stroke-linecap':'round' }, g);
+  // ---------- hero illustration ----------
+  // The painted hiker replaces the old stick figure + cartoon mountain.
+  // The user picks a girl or boy; the choice is saved with the rest of the data.
+  const AVATARS = {
+    girl: { src: 'images/hiker-girl.webp', alt: 'A girl with a backpack and walking stick climbing a winding trail toward a sunlit summit flag' },
+    boy:  { src: 'images/hiker-boy.webp',  alt: 'A boy with a backpack and walking stick climbing a winding trail toward a sunlit summit flag' }
+  };
+
+  function currentAvatar(){
+    return AVATARS[state.avatar] ? state.avatar : 'girl';
   }
+
+  function renderHero(){
+    const key = currentAvatar();
+    const img = document.getElementById('heroImg');
+    if(img){
+      const a = AVATARS[key];
+      if(img.getAttribute('src') !== a.src) img.setAttribute('src', a.src);
+      img.setAttribute('alt', a.alt);
+    }
+    document.querySelectorAll('#avatarToggle button').forEach(btn => {
+      const on = btn.dataset.avatar === key;
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', String(on));
+    });
+  }
+
+  document.querySelectorAll('#avatarToggle button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.avatar = btn.dataset.avatar;
+      save(state);
+      renderHero();
+    });
+  });
 
   function curvePath(x1,y1,x2,y2){
     const midY = (y1 + y2) / 2;
@@ -374,11 +398,10 @@
       el('path', { d, stroke:'var(--dirt)', 'stroke-width':14, fill:'none', 'stroke-linecap':'round' }, pathLayer);
     });
     const summitG = el('g', { transform:`translate(${avgX},${summitY})` }, svg);
-    el('polygon', { points:'0,-34 -28,10 28,10', fill:'var(--sage)', opacity:0.9 }, summitG);
-    el('polygon', { points:'0,-34 -12,-6 12,-6', fill:'#fff', opacity:0.85 }, summitG);
-    el('line', { x1:16, y1:-34, x2:16, y2:-10, stroke:'var(--ink)', 'stroke-width':2 }, summitG);
-    el('polygon', { points:'16,-34 34,-27 16,-20', fill:'var(--gold)' }, summitG);
-    const summitText = el('text', { class:'summitLabel', x:0, y:32, 'text-anchor':'middle' }, summitG);
+    el('ellipse', { cx:0, cy:6, rx:24, ry:7, fill:'var(--sage)', opacity:0.85 }, summitG);
+    el('line', { x1:0, y1:-34, x2:0, y2:4, stroke:'var(--ink)', 'stroke-width':2, 'stroke-linecap':'round' }, summitG);
+    el('polygon', { points:'0,-34 20,-27 0,-20', fill:'var(--gold)' }, summitG);
+    const summitText = el('text', { class:'summitLabel', x:0, y:30, 'text-anchor':'middle' }, summitG);
     summitText.textContent = goal.name;
 
     // steps
@@ -429,18 +452,7 @@
       g.addEventListener('click', () => onStepClick(s.id));
     });
 
-    // hiker: furthest 'done' step, else root
-    let hikerStep = null, hikerRow = -1;
-    goal.steps.forEach(s => {
-      if(s.status === 'done' && pos[s.id].row > hikerRow){ hikerRow = pos[s.id].row; hikerStep = s; }
-    });
-    if(!hikerStep){
-      hikerStep = goal.steps.find(s => !inc[s.id].length) || goal.steps[0];
-    }
-    if(hikerStep){
-      const hp = pos[hikerStep.id];
-      hikerFigure(svg, hp.x - 28, hp.y - 6);
-    }
+    renderHero();
 
     if(!goal.steps.length){
       document.getElementById('trailWrap').innerHTML = '<div class="empty">No steps yet. Tap "Add step" to break trail.</div>';
