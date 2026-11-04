@@ -1,4 +1,4 @@
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
 
   :root{
     --cream:#F4F1EA;
@@ -18,7 +18,7 @@
     font-family:'Inter',system-ui,sans-serif;
     min-height:100vh;
     overscroll-behavior:none;
-    padding-bottom:96px;
+    padding-bottom:140px;
   }
 
   header{
@@ -83,15 +83,16 @@
   .hero img{ display:block; width:100%; height:100%; object-fit:cover; }
   #trailSvg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
   .avatarToggle{
-    position:absolute; right:10px; bottom:10px; z-index:2;
+    position:fixed; right:18px; bottom:22px; z-index:30;
     display:flex; gap:2px; padding:3px;
-    background:rgba(244,241,234,0.92); border:1px solid var(--line);
+    background:rgba(244,241,234,0.95); border:1px solid var(--line);
     border-radius:999px; backdrop-filter:blur(4px);
+    box-shadow:0 2px 8px rgba(58,54,46,0.12);
   }
   .avatarToggle button{
     border:none; background:transparent; color:var(--ink);
-    font-family:'Inter',sans-serif; font-weight:600; font-size:12px;
-    padding:6px 13px; border-radius:999px; cursor:pointer;
+    font-family:'Inter',sans-serif; font-weight:600; font-size:11.5px;
+    padding:5px 12px; border-radius:999px; cursor:pointer;
   }
   .avatarToggle button.on{ background:var(--pine); color:var(--cream); }
   .avatarToggle button:focus-visible{ outline:2px solid var(--clay); outline-offset:2px; }
@@ -173,7 +174,7 @@
   }
 
   #fab{
-    position:fixed; right:18px; bottom:22px; z-index:30;
+    position:fixed; right:18px; bottom:68px; z-index:30;
     background:var(--clay); color:#fff; border:none; border-radius:999px;
     padding:14px 20px; font-family:'Inter',sans-serif; font-weight:700; font-size:14px;
     box-shadow:0 6px 18px rgba(201,123,74,0.4); cursor:pointer;
