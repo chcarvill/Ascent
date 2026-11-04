@@ -265,25 +265,6 @@
     return e;
   }
 
-  function pineTree(parent, x, y, scale){
-    scale = scale || 1;
-    const g = el('g', { transform: `translate(${x},${y}) scale(${scale})`, opacity: 0.85 }, parent);
-    el('rect', { x:-2, y:0, width:4, height:10, fill:'#8B6F47' }, g);
-    [0,-9,-17].forEach((dy,i) => {
-      el('polygon', {
-        points: `0,${dy-16} -13,${dy} 13,${dy}`,
-        fill: i % 2 === 0 ? 'var(--pine)' : 'var(--sage)'
-      }, g);
-    });
-  }
-
-  function rockCluster(parent, x, y, scale){
-    scale = scale || 1;
-    const g = el('g', { transform:`translate(${x},${y}) scale(${scale})`, opacity:0.6 }, parent);
-    el('ellipse', { cx:0, cy:0, rx:14, ry:8, fill:'#B9AE94' }, g);
-    el('ellipse', { cx:12, cy:3, rx:8, ry:5, fill:'#A79C82' }, g);
-  }
-
   // ---------- hero illustration ----------
   // The painted hiker replaces the old stick figure + cartoon mountain.
   // The user picks a girl or boy; the choice is saved with the rest of the data.
@@ -319,9 +300,62 @@
     });
   });
 
-  function curvePath(x1,y1,x2,y2){
-    const midY = (y1 + y2) / 2;
-    return `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+  // ---------- trail geometry ----------
+  // The painted trail, traced from the artwork (the girl and boy images share
+  // the same scenery). Points are in the artwork's own 1024 x 1536 space and
+  // run from just ahead of the hiker up to the summit flag.
+  const IMG_W = 1024;
+  const TRAIL = [[542,1120],[549,1113],[555,1105],[561,1098],[567,1091],[573,1084],[579,1076],[583,1067],[588,1059],[592,1050],[596,1042],[598,1032],[599,1023],[598,1013],[598,1004],[596,994],[594,985],[590,976],[586,968],[582,959],[578,951],[574,942],[571,933],[567,924],[564,915],[561,906],[559,897],[557,888],[555,878],[553,869],[552,860],[553,850],[557,842],[564,835],[572,830],[581,827],[590,824],[599,821],[608,818],[617,815],[626,812],[636,810],[645,808],[654,806],[663,803],[671,798],[678,792],[684,784],[689,776],[691,767],[690,757],[686,748],[681,740],[676,732],[670,724],[665,717],[658,710],[651,704],[642,700],[633,696],[624,693],[615,690],[607,685],[600,679],[594,671],[589,663],[586,654],[584,645],[585,636],[589,627],[594,619],[601,612],[608,605],[615,599],[622,593],[628,586],[632,577],[635,568],[634,559],[632,549],[627,541],[622,533],[616,526],[609,519],[601,514],[593,508],[587,502],[581,494],[577,486],[575,476],[576,467],[579,458],[584,450],[589,442],[594,433],[597,424],[602,416],[608,409],[603,402],[595,399],[586,395],[578,390],[575,381],[575,371],[572,362],[568,354],[565,345],[563,335],[561,326],[561,317]];
+  const TRAIL_CUM = [0];
+  for(let i = 1; i < TRAIL.length; i++){
+    TRAIL_CUM.push(TRAIL_CUM[i-1] + Math.hypot(TRAIL[i][0] - TRAIL[i-1][0], TRAIL[i][1] - TRAIL[i-1][1]));
+  }
+  const TRAIL_TOTAL = TRAIL_CUM[TRAIL_CUM.length - 1];
+  let laneOffset = 34;   // widened per render so forked markers never overlap
+
+  // Point on the trail at fraction s (0 = trailhead, 1 = summit), nudged
+  // sideways by `lane` lanes so steps on a fork sit side by side.
+  function trailAt(s, lane){
+    s = Math.max(0, Math.min(1, s));
+    const d = s * TRAIL_TOTAL;
+    let i = 1;
+    while(i < TRAIL_CUM.length - 1 && TRAIL_CUM[i] < d) i++;
+    const segLen = (TRAIL_CUM[i] - TRAIL_CUM[i-1]) || 1;
+    const u = (d - TRAIL_CUM[i-1]) / segLen;
+    const a = TRAIL[i-1], b = TRAIL[i];
+    const tx = (b[0] - a[0]) / segLen, ty = (b[1] - a[1]) / segLen;
+    const off = Math.max(-2, Math.min(2, lane || 0)) * laneOffset;
+    return {
+      x: a[0] + (b[0] - a[0]) * u - ty * off,
+      y: a[1] + (b[1] - a[1]) * u + tx * off
+    };
+  }
+
+  // A rounded label. `place(width)` returns the left edge and vertical centre.
+  function pill(parent, text, o){
+    const g = el('g', {}, parent);
+    const rect = el('rect', {}, g);
+    const t = el('text', {
+      'font-size': o.fs, fill: o.fg,
+      style: `font-family:${o.family};font-weight:${o.weight};`
+    }, g);
+    t.textContent = text;
+    let w = 0;
+    try{ w = t.getComputedTextLength(); }catch(e){ w = 0; }
+    if(!w) w = text.length * o.fs * 0.56;
+    const padX = o.fs * 0.55, h = o.fs * 1.55, W = w + padX * 2;
+    const p = o.place(W, h);
+    rect.setAttribute('x', p.x); rect.setAttribute('y', p.y - h / 2);
+    rect.setAttribute('width', W); rect.setAttribute('height', h);
+    rect.setAttribute('rx', h / 2);
+    rect.setAttribute('fill', o.bg); rect.setAttribute('fill-opacity', '0.94');
+    rect.setAttribute('stroke', 'rgba(58,54,46,0.18)'); rect.setAttribute('stroke-width', '1.5');
+    t.setAttribute('x', p.x + padX); t.setAttribute('y', p.y + o.fs * 0.35);
+    return g;
+  }
+
+  function shorten(text, n){
+    return text.length > n ? text.slice(0, n - 1) + '\u2026' : text;
   }
 
   // ---------- render ----------
@@ -337,128 +371,140 @@
     recomputeStatuses(goal);
     save(state);
 
+    const { pos, inc, numberOf } = computeLayout(goal);
+    renderHero();
+    renderTrail(goal, pos, numberOf);
+    renderTaskList(goal, pos, inc, numberOf);
+  }
+
+  // Draws the steps on top of the painted trail.
+  function renderTrail(goal, pos, numberOf){
     const svg = document.getElementById('trailSvg');
     svg.innerHTML = '';
-    const { pos, height, order, inc, numberOf } = computeLayout(goal);
-    svg.setAttribute('viewBox', `0 0 ${WIDTH} ${height}`);
-    document.getElementById('trailWrap').style.minHeight = '0';
+    const steps = goal.steps;
+    const allDone = steps.length > 0 && steps.every(s => s.status === 'done');
+    const summit = trailAt(1, 0);
 
-    // sky
-    const grad = el('linearGradient', { id:'sky', x1:'0', y1:'1', x2:'0', y2:'0' }, svg.appendChild(el('defs')));
-    el('stop', { offset:'0%', 'stop-color':'#F4F1EA' }, grad);
-    el('stop', { offset:'100%', 'stop-color':'#FBEBD3' }, grad);
-    el('rect', { x:0, y:0, width:WIDTH, height:height, fill:'url(#sky)' }, svg);
+    // Name of the mountain (or the win) across the sky.
+    pill(svg, shorten(allDone ? 'Summit reached' : goal.name, 26), {
+      fs: 40, family: "'Fraunces',serif", weight: 700,
+      bg: allDone ? 'var(--gold)' : 'var(--cream)', fg: 'var(--pine)',
+      place: (W) => ({ x: (IMG_W - W) / 2, y: 76 })
+    });
 
-    // background tagline — repeats quietly down the trail so it's visible
-    // no matter how far the user has scrolled
-    const TAGLINE = 'Make everyday extraordinary.';
-    const taglineGap = 460;
-    for(let ty = 200; ty < height - 80; ty += taglineGap){
-      el('text', {
-        x: WIDTH / 2, y: ty, 'text-anchor': 'middle',
-        transform: `rotate(-6 ${WIDTH / 2} ${ty})`,
-        style: "font-family:'Fraunces',serif; font-style:italic; font-weight:600; font-size:26px;",
-        fill: 'var(--pine)', opacity: '0.07'
-      }, svg).textContent = TAGLINE;
+    if(!steps.length){
+      pill(svg, 'No steps yet. Tap + Add step to break trail.', {
+        fs: 28, family: "'Inter',sans-serif", weight: 600,
+        bg: 'var(--cream)', fg: 'var(--ink)',
+        place: (W) => ({ x: (IMG_W - W) / 2, y: 1160 })
+      });
+      return;
     }
 
-    const byId = {}; goal.steps.forEach(s => byId[s.id] = s);
+    if(allDone){
+      el('circle', { cx: summit.x, cy: summit.y, r: 66, fill: 'var(--gold)', opacity: 0.3, class: 'pulse' }, svg);
+    }
 
-    // ground path (drawn first, under everything)
-    const pathLayer = el('g', {}, svg);
-    goal.steps.forEach(s => {
+    const rows = Math.max(...steps.map(s => pos[s.id].row)) + 1;
+    const spacing = TRAIL_TOTAL / rows;
+    const baseR = Math.max(13, Math.min(28, spacing * 0.36));
+    laneOffset = Math.max(34, (2 * baseR + 12) / 1.15);
+
+    // trail between steps: solid once walked, dotted while still ahead
+    const linkLayer = el('g', {}, svg);
+    function link(sa, la, sb, lb, walked){
+      const n = Math.max(6, Math.ceil((sb - sa) * TRAIL_TOTAL / 18));
+      let d = '';
+      for(let k = 0; k <= n; k++){
+        const u = k / n;
+        const p = trailAt(sa + (sb - sa) * u, la + (lb - la) * u);
+        d += (k ? ' L ' : 'M ') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+      }
+      const base = { d, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+      if(walked){
+        el('path', Object.assign({ stroke: '#fff', 'stroke-width': 15, 'stroke-opacity': 0.65 }, base), linkLayer);
+        el('path', Object.assign({ stroke: 'var(--pine)', 'stroke-width': 8 }, base), linkLayer);
+      } else {
+        el('path', Object.assign({ stroke: 'var(--ink)', 'stroke-width': 11, 'stroke-opacity': 0.3, 'stroke-dasharray': '0.1 17' }, base), linkLayer);
+        el('path', Object.assign({ stroke: '#fff', 'stroke-width': 7, 'stroke-dasharray': '0.1 17' }, base), linkLayer);
+      }
+    }
+    steps.forEach(s => {
+      const a = pos[s.id];
       s.leadsTo.forEach(childId => {
         if(!pos[childId]) return;
-        const p1 = pos[s.id], p2 = pos[childId];
-        const d = curvePath(p1.x, p1.y, p2.x, p2.y);
-        el('path', { d, stroke:'var(--dirt)', 'stroke-width':16, fill:'none', 'stroke-linecap':'round' }, pathLayer);
-        el('path', { d, stroke:'#C6B688', 'stroke-width':2, 'stroke-dasharray':'1 10', fill:'none', 'stroke-linecap':'round', opacity:0.7 }, pathLayer);
+        const b = pos[childId];
+        link(a.row / rows, a.lane, b.row / rows, b.lane, s.status === 'done');
       });
+      if(!s.leadsTo.length){
+        link(a.row / rows, a.lane, 1, 0, s.status === 'done');
+      }
     });
 
-    // decorations
-    const decoLayer = el('g', {}, svg);
-    order.forEach((s, i) => {
+    // step markers (the current step is drawn last so it sits on top)
+    const markerLayer = el('g', {}, svg);
+    const labelLayer = el('g', {}, svg);
+    const statusWord = { done: 'done', active: 'current step', locked: 'not yet available' };
+    [...steps].sort((a, b) => (a.status === 'active') - (b.status === 'active')).forEach(s => {
       const p = pos[s.id];
-      const seedL = (i * 7919) % 100 / 100;
-      const seedR = (i * 104729) % 100 / 100;
-      if(seedL > 0.4) pineTree(decoLayer, p.x - 44 - seedL*10, p.y + 6, 0.8 + seedL*0.4);
-      if(seedR > 0.55) rockCluster(decoLayer, p.x + 40 + seedR*8, p.y + 12, 0.7 + seedR*0.3);
-      if(seedL < 0.25) pineTree(decoLayer, p.x + 50, p.y - 20, 0.6);
-    });
-
-    // summit
-    const rootRow = Math.max(...goal.steps.map(s => pos[s.id].row));
-    const tips = goal.steps.filter(s => pos[s.id].row === rootRow);
-    const avgX = tips.reduce((sum,s) => sum + pos[s.id].x, 0) / tips.length;
-    const summitY = Math.min(...tips.map(s => pos[s.id].y)) - ROW_H * 0.85;
-    tips.forEach(s => {
-      const p = pos[s.id];
-      const d = curvePath(p.x, p.y, avgX, summitY);
-      el('path', { d, stroke:'var(--dirt)', 'stroke-width':14, fill:'none', 'stroke-linecap':'round' }, pathLayer);
-    });
-    const summitG = el('g', { transform:`translate(${avgX},${summitY})` }, svg);
-    el('ellipse', { cx:0, cy:6, rx:24, ry:7, fill:'var(--sage)', opacity:0.85 }, summitG);
-    el('line', { x1:0, y1:-34, x2:0, y2:4, stroke:'var(--ink)', 'stroke-width':2, 'stroke-linecap':'round' }, summitG);
-    el('polygon', { points:'0,-34 20,-27 0,-20', fill:'var(--gold)' }, summitG);
-    const summitText = el('text', { class:'summitLabel', x:0, y:30, 'text-anchor':'middle' }, summitG);
-    summitText.textContent = goal.name;
-
-    // steps
-    goal.steps.forEach(s => {
-      const p = pos[s.id];
-      const g = el('g', { class:'marker ' + s.status, transform:`translate(${p.x},${p.y})` }, svg);
-      let fill = 'var(--sage)', stroke = 'none', dash = null, extraClass = '';
-      let r = 14;
-      if(s.status === 'done'){ fill = 'var(--pine)'; }
-      else if(s.status === 'active'){ fill = 'var(--clay)'; r = 19; }
-      else { fill = '#fff'; stroke = '#B9AE94'; dash = '4 4'; r = 12; }
-
-      if(s.status === 'active'){
-        el('circle', { r: r + 6, fill:'var(--clay)', opacity:0.18 }, g);
+      const pt = trailAt(p.row / rows, p.lane);
+      const active = s.status === 'active';
+      const r = active ? Math.min(baseR * 1.25, 34) : baseR;
+      const g = el('g', {
+        class: 'marker ' + s.status,
+        transform: `translate(${pt.x.toFixed(1)},${pt.y.toFixed(1)})`,
+        tabindex: '0', role: 'button',
+        'aria-label': `Step ${numberOf[s.id]}: ${s.label} (${statusWord[s.status] || s.status})`
+      }, markerLayer);
+      el('title', {}, g).textContent = s.label;
+      el('circle', { r: r + 10, fill: 'transparent' }, g);
+      if(active){
+        el('circle', { r: r + 11, fill: 'var(--clay)', opacity: 0.3, class: 'pulse' }, g);
       }
 
-      const circle = el('circle', { r, fill, class: extraClass }, g);
-      if(stroke !== 'none'){ circle.setAttribute('stroke', stroke); circle.setAttribute('stroke-width','2'); if(dash) circle.setAttribute('stroke-dasharray', dash); }
-
+      let body;
       if(s.status === 'done'){
-        el('path', { d:'M -5 0 L -1.5 4 L 6 -5', stroke:'#fff', 'stroke-width':2.2, fill:'none', 'stroke-linecap':'round', 'stroke-linejoin':'round' }, g);
-      } else if(s.status === 'locked'){
-        el('rect', { x:-4.5, y:-1, width:9, height:7, rx:1.5, fill:'none', stroke:'#B9AE94', 'stroke-width':1.6 }, g);
-        el('path', { d:'M -3 -1 L -3 -4 A 3 3 0 0 1 3 -4 L 3 -1', fill:'none', stroke:'#B9AE94', 'stroke-width':1.6 }, g);
-      } else if(s.status === 'active'){
-        el('circle', { r:3.5, fill:'#fff' }, g);
+        body = el('circle', { r, fill: 'var(--pine)', stroke: '#fff', 'stroke-width': 3.5 }, g);
+        el('path', {
+          d: `M ${-r*0.4} ${r*0.02} L ${-r*0.1} ${r*0.32} L ${r*0.44} ${-r*0.32}`,
+          stroke: '#fff', 'stroke-width': Math.max(2.5, r * 0.17), fill: 'none',
+          'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+        }, g);
+      } else if(active){
+        body = el('circle', { r, fill: 'var(--clay)', stroke: '#fff', 'stroke-width': 4 }, g);
+      } else {
+        body = el('circle', { r, fill: '#fff', stroke: '#9c917a', 'stroke-width': 2.5, 'stroke-dasharray': '5 4' }, g);
       }
+      body.setAttribute('class', 'markerBody');
 
-      const side = p.lane >= 0 ? 1 : -1;
-      const labelX = side * (r + 8);
-      const anchor = side === 1 ? 'start' : 'end';
-      const t = el('text', {
-        class: 'stepLabel' + (s.status === 'active' ? ' stepLabelCurrent' : ''),
-        x: labelX, y:4, 'text-anchor':anchor
-      }, g);
-      t.textContent = s.label;
-
-      // step number badge
-      const badgeY = -(r + 13);
-      el('circle', { cx:0, cy:badgeY, r:9, fill:'#fff', stroke:'var(--line)', 'stroke-width':1 }, g);
-      const numText = el('text', {
-        x:0, y:badgeY + 3.5, 'text-anchor':'middle',
-        style:'font-family:Inter,sans-serif; font-size:9.5px; font-weight:700;',
-        fill:'var(--ink)'
-      }, g);
-      numText.textContent = numberOf[s.id];
+      if(s.status !== 'done'){
+        const fs = r * 0.95;
+        const num = el('text', {
+          x: 0, y: fs * 0.35, 'text-anchor': 'middle', 'font-size': fs,
+          fill: active ? '#fff' : 'var(--ink)', opacity: active ? 1 : 0.65,
+          style: "font-family:'Inter',sans-serif;font-weight:700;"
+        }, g);
+        num.textContent = numberOf[s.id];
+      }
 
       g.addEventListener('click', () => onStepClick(s.id));
+      g.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); onStepClick(s.id); }
+      });
+
+      if(active){
+        pill(labelLayer, shorten(s.label, 18), {
+          fs: 30, family: "'Inter',sans-serif", weight: 700,
+          bg: 'var(--cream)', fg: 'var(--ink)',
+          place: (W) => {
+            const right = pt.x + r + 16 + W <= IMG_W - 10;
+            let x = right ? pt.x + r + 16 : pt.x - r - 16 - W;
+            x = Math.max(10, Math.min(IMG_W - 10 - W, x));
+            return { x, y: pt.y };
+          }
+        });
+      }
     });
-
-    renderHero();
-
-    if(!goal.steps.length){
-      document.getElementById('trailWrap').innerHTML = '<div class="empty">No steps yet. Tap "Add step" to break trail.</div>';
-    }
-
-    renderTaskList(goal, pos, inc, numberOf);
   }
 
   // Every not-done step, ordered by position on the trail (root -> summit).
@@ -991,4 +1037,5 @@
   });
 
   render();
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(() => render()); }
 })();
