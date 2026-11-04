@@ -405,10 +405,12 @@
       el('circle', { cx: summit.x, cy: summit.y, r: 66, fill: 'var(--gold)', opacity: 0.3, class: 'pulse' }, svg);
     }
 
-    const rows = Math.max(...steps.map(s => pos[s.id].row)) + 1;
-    const spacing = TRAIL_TOTAL / rows;
+    // Steps are spread evenly along the whole trail in their numbered order
+    // (the same order as the checklist), however the steps are connected.
+    const n = steps.length;
+    const ordered = [...steps].sort((a, b) => numberOf[a.id] - numberOf[b.id]);
+    const spacing = TRAIL_TOTAL / n;
     const baseR = Math.max(13, Math.min(28, spacing * 0.36));
-    laneOffset = Math.max(34, (2 * baseR + 12) / 1.15);
 
     // trail between steps: solid once walked, dotted while still ahead
     const linkLayer = el('g', {}, svg);
@@ -429,16 +431,8 @@
         el('path', Object.assign({ stroke: '#fff', 'stroke-width': 7, 'stroke-dasharray': '0.1 17' }, base), linkLayer);
       }
     }
-    steps.forEach(s => {
-      const a = pos[s.id];
-      s.leadsTo.forEach(childId => {
-        if(!pos[childId]) return;
-        const b = pos[childId];
-        link(a.row / rows, a.lane, b.row / rows, b.lane, s.status === 'done');
-      });
-      if(!s.leadsTo.length){
-        link(a.row / rows, a.lane, 1, 0, s.status === 'done');
-      }
+    ordered.forEach((st, k) => {
+      link(k / n, 0, (k + 1) / n, 0, st.status === 'done');
     });
 
     // step markers (the current step is drawn last so it sits on top)
@@ -446,8 +440,7 @@
     const labelLayer = el('g', {}, svg);
     const statusWord = { done: 'done', active: 'current step', locked: 'not yet available' };
     [...steps].sort((a, b) => (a.status === 'active') - (b.status === 'active')).forEach(s => {
-      const p = pos[s.id];
-      const pt = trailAt(p.row / rows, p.lane);
+      const pt = trailAt((numberOf[s.id] - 1) / n, 0);
       const active = s.status === 'active';
       const r = active ? Math.min(baseR * 1.25, 34) : baseR;
       const g = el('g', {
